@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Installs Vite+, Node, the package manager, and runs `vp install`.
+      # `cache: true` caches project DEPENDENCIES (not task results).
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: '22'
+          cache: true
+
+      # Separately cache the Vite Task OUTPUT cache so task results are
+      # reused across runs. Placed after setup-vp because the cache lives
+      # inside node_modules (created by setup-vp's `vp install`).
+      - name: Restore Vite Task cache
+        id: vite-task-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.vite/task-cache
+          key: vite-task-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            vite-task-${{ runner.os }}-
+
+      - name: Show actions/cache outcome
+        run: echo "restored from key: ${{ steps.vite-task-cache.outputs.cache-matched-key }}"
+
+      - run: vp run build
+      - run: vp run greet
